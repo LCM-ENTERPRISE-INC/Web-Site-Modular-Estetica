@@ -3,6 +3,7 @@ name: Deploy site (editor visual)
 on:
   repository_dispatch:
     types: [deploy-site]
+  workflow_dispatch:
 
 permissions:
   contents: write
