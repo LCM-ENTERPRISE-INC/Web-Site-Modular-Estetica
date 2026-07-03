@@ -1,16 +1,11 @@
-# ============================================================================
-#  .github/workflows/deploy.yml
-#  Recebe o repository_dispatch disparado pelo Apps Script (Code.gs),
-#  baixa o .zip do Drive, descompacta e commita a pagina editada na branch main.
-# ============================================================================
 name: Deploy site (editor visual)
 
 on:
   repository_dispatch:
-    types: [deploy-site]        # deve casar com EVENT_TYPE do Code.gs
+    types: [deploy-site]
 
 permissions:
-  contents: write               # necessario para o GITHUB_TOKEN commitar/pushar
+  contents: write
 
 concurrency:
   group: deploy-site
@@ -41,9 +36,8 @@ jobs:
           fi
           curl -sSL "$DOWNLOAD_URL" -o site.zip
           file site.zip || true
-          # valida que baixou um zip de verdade (e nao uma pagina de erro/HTML do Drive)
           if ! unzip -tq site.zip >/dev/null 2>&1; then
-            echo "::error::Arquivo baixado nao e um .zip valido (verifique o compartilhamento do Drive)"; exit 1
+            echo "::error::Arquivo baixado nao e um .zip valido"; exit 1
           fi
 
       - name: Descompactar
@@ -51,26 +45,17 @@ jobs:
           set -euo pipefail
           rm -rf _unzipped && mkdir _unzipped
           unzip -o site.zip -d _unzipped
-          echo "--- conteudo ---"; find _unzipped -maxdepth 3 -type f | sort
 
       - name: Sincronizar para a raiz do repositorio
         run: |
           set -euo pipefail
-          # O editor exporta um pacote PARCIAL:  web_site_official/<page>.html + web_site_official/images/*
           SRC="_unzipped/web_site_official"
           if [ ! -d "$SRC" ]; then SRC="_unzipped"; fi
 
-          # guarda de sanidade: o pacote precisa conter ao menos um arquivo
           if [ -z "$(find "$SRC" -type f -print -quit)" ]; then
             echo "::error::Pacote vazio — nada para publicar"; exit 1
           fi
 
-          # Substituicao LIMPA da pagina editada: o rsync sobrescreve os arquivos
-          # do pacote (a pagina + imagens) na raiz. NAO usamos --delete de proposito:
-          # o zip e parcial, entao apagar tudo que nao esta nele removeria a
-          # infraestrutura do site (editor/, auth.js, .github/, Code.gs, demais
-          # paginas). Excluimos .git e .github para que um pacote jamais consiga
-          # sobrescrever o versionamento ou o proprio pipeline.
           rsync -av --checksum --exclude='.git' --exclude='.github' "$SRC"/ ./
           rm -rf _unzipped site.zip
 
@@ -80,11 +65,11 @@ jobs:
           PAGE:   ${{ github.event.client_payload.page }}
           STAMP:  ${{ github.event.client_payload.timestamp }}
         run: |
-          git config user.name  "Deploy Bot (Editor Visual)"
+          git config user.name "Deploy Bot (Editor Visual)"
           git config user.email "deploy-bot@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then
             echo "Nenhuma alteracao para commitar."; exit 0
           fi
-          git commit -m "deploy: ${PAGE} — ${CLIENT} (${STAMP}) via editor visual"
+          git commit -m "deploy: ${PAGE} — ${CLIENT} (${STAMP})"
           git push origin main
