@@ -988,7 +988,7 @@
   }
 
   var VisualEditor = {
-    version: '2.3.0',
+    version: '2.4.0',
 
     init: function () {
       if (this._inited) return;
@@ -1013,6 +1013,8 @@
     },
 
     save: function () {
+      // ETAPA 1 — confirmação nativa antes de publicar no site oficial
+      if (!confirm('Tem certeza que deseja salvar e publicar as alterações no site oficial?')) return;
       Toast.show('Preparando pacote para publicação…', 4000);
       buildZipBlob().then(function (blob) {
         //triggerDownload(blob, 'web_site_official.zip');   // cópia local de segurança
